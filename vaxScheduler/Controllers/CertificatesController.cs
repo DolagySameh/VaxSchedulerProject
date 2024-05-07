@@ -24,48 +24,46 @@ namespace api.Controllers
         }
 
         [HttpPost("upload")]
-        public IActionResult UploadCertificate(IFormFile file, string userId)
+public IActionResult UploadCertificate(IFormFile file, string userId)
+{
+    if (file == null || file.Length == 0)
+    {
+        return BadRequest("No file uploaded");
+    }
+    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+    var maxFileSize = 10 * 1024 * 1024;
+
+    if (!allowedExtensions.Contains(Path.GetExtension(file.FileName).ToLower()))
+    {
+        return BadRequest("Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.");
+    }
+
+    if (file.Length > maxFileSize)
+    {
+        return BadRequest("File size exceeds the limit of 10MB.");
+    }
+    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+    var filePath = Path.Combine( fileName); // Use the class-level variable directly here
+
+    try
+    {
+        using (var stream = new FileStream(filePath, FileMode.Create))
         {
-            if (file == null || file.Length == 0)
-            {
-                return BadRequest("No file uploaded");
-            }
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-            var maxFileSize = 10 * 1024 * 1024;
-
-            if (!allowedExtensions.Contains(Path.GetExtension(file.FileName).ToLower()))
-            {
-                return BadRequest("Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed.");
-            }
-
-            if (file.Length > maxFileSize)
-            {
-                return BadRequest("File size exceeds the limit of 10MB.");
-            }
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-            var uploadsDirectory = Path.Combine(_environment.WebRootPath, "uploads");
-            Directory.CreateDirectory(uploadsDirectory);
-
-            var filePath = Path.Combine(uploadsDirectory, fileName);
-
-            try
-            {
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    file.CopyTo(stream);
-                }
-                var certificate = new Certificate { Name = fileName, FilePath = filePath, AppUserId = userId };
-                _context.Certificates.Add(certificate);
-                _context.SaveChanges();
-
-                return Ok(new { message = "Certificate uploaded successfully", certificateId = certificate.Id });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to save certificate information to the database.");
-            }
+            file.CopyTo(stream);
         }
+        var certificate = new Certificate { Name = fileName, FilePath = filePath, AppUserId = userId };
+        _context.Certificates.Add(certificate);
+        _context.SaveChanges();
+
+        return Ok(new { message = "Certificate uploaded successfully", certificateId = certificate.Id });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex);
+        return StatusCode(StatusCodes.Status500InternalServerError, "Failed to save certificate information to the database.");
+    }
+}
+
 
 
 
